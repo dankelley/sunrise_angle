@@ -1,6 +1,8 @@
-## Start our sunrise-time search at 8AM UTC, or about 4AM local
-
-t0 <- as.POSIXct(sprintf("%s 04:00:00", Sys.Date()), tz="UTC")
+## NOTE: several things here are specific to Halifax, and to Dan Kelley's
+## computer. He can make things more general, if others want to use the code;
+## readers should feel free to post an 'issue' on the github site
+##     https://github.com/dankelley/sunrise_angle/issues
+## to request some help in that or any problems that (ahem) arise.
 
 ## Centre map on Halifax
 lon <- -63.60
@@ -8,18 +10,23 @@ lat <- 44.66
 
 library(oce)
 
-## Function to find sunrise time
+## Find sunrise and sunset times as times when sun crosses
+## horizon. I'm using uniroot() with preset intervals, although obviously
+## there are other ways that should be explored to port this to other
+## spots on the globe.
+t0 <- as.POSIXct(sprintf("%s 04:00:00", Sys.Date()), tz="UTC")
 sunrise <- numberAsPOSIXct(uniroot(function(t)
-                                   sunAngle(t, lat=lat, lon=lon, useRefraction=TRUE)$altitude,
-                                   interval=as.numeric(t0 + 3600*c(2,13)))$root)
+                                   sunAngle(t, longitude=lon, latitude=lat, useRefraction=TRUE)$altitude,
+                                   interval=as.numeric(t0 + 3600*c(2,10)))$root)
 sunset <- numberAsPOSIXct(uniroot(function(t)
-                                  sunAngle(t, lat=lat, lon=lon, useRefraction=TRUE)$altitude,
-                                  interval=as.numeric(t0 + 3600*c(13,22)))$root)
+                                  sunAngle(t, longitude=lon, latitude=lat, useRefraction=TRUE)$altitude,
+                                  interval=as.numeric(t0 + 3600*c(18,25)))$root)
+rise <- sunAngle(sunrise, longitude=lon, latitude=lat, useRefraction=TRUE)
+set <- sunAngle(sunset, longitude=lon, latitude=lat, useRefraction=TRUE)
 
-
-## redefine azimuth direction for plotting
-azimuthSunrise <- 90 - sunAngle(sunrise, latitude=lat, longitude=lon)$azimuth
-azimuthSunset <- 90 - sunAngle(sunset, latitude=lat, longitude=lon)$azimuth
+## debugging
+##> message("sunrise at ", sunrise, " UTC", ", altitude=", rise$altitude, ", azimuth=", rise$azimuth)
+##> message("sunset at ", sunset, " UTC", ", altitude=", set$altitude, ", azimuth=", set$azimuth)
 
 library(OpenStreetMap)
 
@@ -39,14 +46,17 @@ for (i in seq <- seq_along(mapSpanInDegrees)) {
     cy <- mean(par('usr')[3:4])
     d <- diff(par('usr')[3:4]) # scales as the map
     for (o in d*seq(-1, 1, length.out=30)) {
-        lines(cx+c(-1,1)*d*cos(azimuthSunrise*pi/180),
-              cy+o+c(-1,1)*d*sin(azimuthSunrise*pi/180), col='brown1', lwd=3)
-        lines(cx+c(-1,1)*d*cos(azimuthSunrise*pi/180),
-              cy+o+c(-1,1)*d*sin(azimuthSunrise*pi/180), col='darkgoldenrod1', lwd=1.75)
+        angle <- pi * (90 - rise$azimuth) / 180
+        lines(cx+c(-1,1)*d*cos(angle),
+              cy+o+c(-1,1)*d*sin(angle), col='brown1', lwd=3)
+        lines(cx+c(-1,1)*d*cos(angle),
+              cy+o+c(-1,1)*d*sin(angle), col='darkgoldenrod1', lwd=1.75)
     }
     ## Label in local time
-    attributes(sunrise)$tzone <- "America/Halifax"
-    mtext(paste(format(sunrise, "%a %d %b, %Y"), ": sunrise at ", format(sunrise, "%H:%M %Z"), sep=""),
+    risetime <- sunrise
+    attributes(risetime)$tzone <- "America/Halifax"
+    mtext(paste(format(risetime, "%a %d %b, %Y"), ": sunrise at ", format(risetime, "%H:%M %Z"),
+               sprintf(" at azimuth %.0f", rise$azimuth),  sep=""),
           side=3, line=0, adj=0.5)
     if (!interactive()) dev.off()
 
@@ -61,14 +71,17 @@ for (i in seq <- seq_along(mapSpanInDegrees)) {
     cy <- mean(par('usr')[3:4])
     d <- diff(par('usr')[3:4]) # scales as the map
     for (o in d*seq(-1, 1, length.out=30)) {
-        lines(cx+c(-1,1)*d*cos(azimuthSunset*pi/180),
-              cy+o+c(-1,1)*d*sin(azimuthSunset*pi/180), col='brown1', lwd=3)
-        lines(cx+c(-1,1)*d*cos(azimuthSunset*pi/180),
-              cy+o+c(-1,1)*d*sin(azimuthSunset*pi/180), col='darkgoldenrod1', lwd=1.75)
+        angle <- pi * (90 - set$azimuth) / 180
+        lines(cx+c(-1,1)*d*cos(angle),
+              cy+o+c(-1,1)*d*sin(angle), col='brown1', lwd=3)
+        lines(cx+c(-1,1)*d*cos(angle),
+              cy+o+c(-1,1)*d*sin(angle), col='darkgoldenrod1', lwd=1.75)
     }
     ## Label in local time
-    attributes(sunset)$tzone <- "America/Halifax"
-    mtext(paste(format(sunset, "%a %d %b, %Y"), ": sunset at ", format(sunset, "%H:%M %Z"), sep=""),
+    settime <- sunset
+    attributes(settime)$tzone <- "America/Halifax"
+    mtext(paste(format(settime, "%a %d %b, %Y"), ": sunset at ", format(settime, "%H:%M %Z"),
+               sprintf(" at azimuth %.0f", set$azimuth),  sep=""),
           side=3, line=0, adj=0.5)
     if (!interactive()) dev.off()
 }
