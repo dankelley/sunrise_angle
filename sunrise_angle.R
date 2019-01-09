@@ -14,10 +14,10 @@ library(oce)
 ## horizon. I'm using uniroot() with preset intervals, although obviously
 ## there are other ways that should be explored to port this to other
 ## spots on the globe.
-t0 <- as.POSIXct(sprintf("%s 04:00:00", Sys.Date()), tz="UTC")
+t0 <- as.POSIXct(sprintf("%s 00:00:00", Sys.Date()), tz="UTC")
 sunrise <- numberAsPOSIXct(uniroot(function(t)
                                    sunAngle(t, longitude=lon, latitude=lat, useRefraction=TRUE)$altitude,
-                                   interval=as.numeric(t0 + 3600*c(2,10)))$root)
+                                   interval=as.numeric(t0 + 3600*c(8,14)))$root)
 sunset <- numberAsPOSIXct(uniroot(function(t)
                                   sunAngle(t, longitude=lon, latitude=lat, useRefraction=TRUE)$altitude,
                                   interval=as.numeric(t0 + 3600*c(18,25)))$root)
@@ -35,7 +35,6 @@ for (i in seq <- seq_along(mapSpanInDegrees)) {
     D <- mapSpanInDegrees[i] / 111     # km
     Dlon <- D / cos(lat * pi / 180)   # longitude
     map <- openmap(c(lat=lat+D/2, lon=lon-Dlon/2), c(lat=lat-D/2, lon=lon+Dlon/2), minNumTiles=9)
-    
     filename <- paste("/Users/kelley/Sites/sunrise_angle/sunrise_angle_", i, ".png", sep="")
     if (!interactive()) png(filename, width=900, height=900, res=120, pointsize=10)
     par(mar=c(0.5, 0.5, 1, 0.5))
@@ -55,12 +54,11 @@ for (i in seq <- seq_along(mapSpanInDegrees)) {
     ## Label in local time
     risetime <- sunrise
     attributes(risetime)$tzone <- "America/Halifax"
-    mtext(paste(format(risetime, "%a %d %b, %Y"), ": sunrise at ", format(risetime, "%H:%M %Z"),
+    mtext(paste(format(risetime, "%a %b %d, %Y"), ": sunrise at ", format(risetime, "%H:%M %Z"),
                sprintf(" at azimuth %.0f", rise$azimuth),  sep=""),
           side=3, line=0, adj=0.5)
     if (!interactive()) dev.off()
 
-    
     filename <- paste("/Users/kelley/Sites/sunrise_angle/sunset_angle_", i, ".png", sep="")
     if (!interactive()) png(filename, width=900, height=900, res=120, pointsize=10)
     par(mar=c(0.5, 0.5, 1, 0.5))
@@ -80,7 +78,7 @@ for (i in seq <- seq_along(mapSpanInDegrees)) {
     ## Label in local time
     settime <- sunset
     attributes(settime)$tzone <- "America/Halifax"
-    mtext(paste(format(settime, "%a %d %b, %Y"), ": sunset at ", format(settime, "%H:%M %Z"),
+    mtext(paste(format(settime, "%a %b %d, %Y"), ": sunset at ", format(settime, "%H:%M %Z"),
                sprintf(" at azimuth %.0f", set$azimuth),  sep=""),
           side=3, line=0, adj=0.5)
     if (!interactive()) dev.off()
